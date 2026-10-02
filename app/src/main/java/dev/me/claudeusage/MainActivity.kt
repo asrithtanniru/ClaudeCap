@@ -15,6 +15,7 @@ import dev.me.claudeusage.data.OkHttpFetcher
 import dev.me.claudeusage.data.RefreshResult
 import dev.me.claudeusage.data.SecureStore
 import dev.me.claudeusage.data.UsageRepository
+import dev.me.claudeusage.data.WebViewFetcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,7 +32,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         secureStore = SecureStore(this)
-        repository = UsageRepository(this, OkHttpFetcher(secureStore))
+        repository = UsageRepository(this, OkHttpFetcher(secureStore), WebViewFetcher(this, secureStore))
 
         statusText = TextView(this).apply {
             textSize = 16f
