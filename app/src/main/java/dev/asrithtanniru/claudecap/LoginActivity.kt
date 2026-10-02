@@ -49,11 +49,12 @@ class LoginActivity : Activity() {
 
         val hint = TextView(this).apply {
             text = "Use \"Continue with email\" below, then enter the verification code sent to " +
-                "your email. Google sign-in doesn't work inside this app."
+                "your email. Google sign-in doesn't work inside this app. If a cookie banner " +
+                "shows up, accept it — sign-in won't work without cookies."
             setBackgroundColor("#262624".toColorInt())
             setTextColor("#9C9A92".toColorInt())
             textSize = 13f
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setPadding(dp(16), dp(48), dp(16), dp(16))
         }
 
         val root = LinearLayout(this).apply {
