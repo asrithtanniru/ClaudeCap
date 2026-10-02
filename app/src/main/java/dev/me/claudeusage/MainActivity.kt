@@ -97,7 +97,6 @@ class MainActivity : Activity() {
     }
 
     private fun refreshNow() {
-        updateStatus("Refreshing…")
         activityScope.launch {
             val result = repository.refresh()
             val extra = when (result) {

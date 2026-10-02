@@ -95,7 +95,7 @@ private fun WidgetContent(uiState: WidgetUiState) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(Palette.CardBackground)
-            .cornerRadius(16.dp)
+            .cornerRadius(android.R.dimen.system_app_widget_background_radius)
             .padding(16.dp)
     ) {
         when (uiState) {

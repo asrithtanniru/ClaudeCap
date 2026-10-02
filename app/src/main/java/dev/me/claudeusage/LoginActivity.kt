@@ -3,6 +3,7 @@ package dev.me.claudeusage
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.CookieManager
@@ -23,7 +24,15 @@ class LoginActivity : Activity() {
         super.onCreate(savedInstanceState)
         secureStore = SecureStore(this)
 
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
+
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+
         webView = WebView(this).apply {
+            cookieManager.setAcceptThirdPartyCookies(this, true)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             webViewClient = object : WebViewClient() {
