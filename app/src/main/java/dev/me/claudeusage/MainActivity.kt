@@ -16,6 +16,8 @@ import dev.me.claudeusage.data.RefreshResult
 import dev.me.claudeusage.data.SecureStore
 import dev.me.claudeusage.data.UsageRepository
 import dev.me.claudeusage.data.WebViewFetcher
+import dev.me.claudeusage.widget.UsageWidget
+import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -80,6 +82,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         updateStatus()
+        if (secureStore.getString(SecureStore.KEY_COOKIE) != null) refreshNow()
     }
 
     override fun onDestroy() {
@@ -106,6 +109,7 @@ class MainActivity : Activity() {
                 is RefreshResult.ParseFailed -> "Couldn't read usage"
             }
             updateStatus(extra)
+            UsageWidget().updateAll(this@MainActivity)
         }
     }
 
