@@ -1,4 +1,4 @@
-# Claude Usage Widget
+# ClaudeCap
 
 A personal Android home-screen widget showing Claude Pro usage: the 5-hour
 session bar, the weekly bar, and when each resets. Sideloaded, personal use
@@ -65,7 +65,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
      claude.ai → DevTools → Network, reload, click any request to claude.ai,
      and copy the `Cookie` request header value. Paste that plus the org id
      (the `lastActiveOrg` cookie's value) into the dialog.
-2. Long-press your home screen → **Widgets** → **Claude Usage**, and place it.
+2. Long-press your home screen → **Widgets** → **ClaudeCap**, and place it.
 3. It auto-refreshes every 12 hours; tap the reload icon on the widget for
    an immediate refresh.
 

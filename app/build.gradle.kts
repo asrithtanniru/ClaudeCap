@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.me.claudeusage"
+    namespace = "dev.asrithtanniru.claudecap"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.me.claudeusage"
+        applicationId = "dev.asrithtanniru.claudecap"
         minSdk = 31
         targetSdk = 36
         versionCode = 1

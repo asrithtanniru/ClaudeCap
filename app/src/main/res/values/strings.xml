@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Claude Usage</string>
+    <string name="app_name">ClaudeCap</string>
     <string name="widget_description">Shows your Claude Pro 5-hour and weekly usage.</string>
 </resources>

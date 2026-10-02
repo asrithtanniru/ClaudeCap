@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#1F1E1D"/>
+  <g transform="translate(100 100) scale(13)" fill="none" stroke-linecap="round" stroke-width="3.2">
+    <!-- track: open "C" ring, 270 degrees -->
+    <path d="M17.657,6.343 A8,8 0 1,0 17.657,17.657" stroke="#3A3935"/>
+    <!-- fill: about 65% used -->
+    <path d="M17.657,17.657 A8,8 0 0,1 5.872,6.858" stroke="#D97757"/>
+    <!-- knob at the fill level -->
+    <circle cx="5.872" cy="6.858" r="1.15" fill="#FAF9F5" stroke="none"/>
+  </g>
+</svg>
