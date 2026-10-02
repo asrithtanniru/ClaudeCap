@@ -21,6 +21,7 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.CircularProgressIndicator
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -91,11 +92,13 @@ class UsageWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(uiState: WidgetUiState) {
+    val context = LocalContext.current
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(Palette.CardBackground)
             .cornerRadius(android.R.dimen.system_app_widget_background_radius)
+            .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
             .padding(16.dp)
     ) {
         when (uiState) {
@@ -109,13 +112,7 @@ private fun WidgetContent(uiState: WidgetUiState) {
 
 @Composable
 private fun TapMessage(message: String) {
-    val context = LocalContext.current
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .clickable(actionStartActivity(Intent(context, MainActivity::class.java))),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(message, style = TextStyle(color = ColorProvider(Palette.PrimaryText), fontSize = 16.sp))
     }
 }
@@ -129,7 +126,7 @@ private fun NormalContent(content: WidgetUiState.Content) {
     val is24Hour = DateFormat.is24HourFormat(LocalContext.current)
 
     Column(modifier = GlanceModifier.fillMaxSize()) {
-        HeaderRow(content.snapshot, content.offline, zone, is24Hour)
+        HeaderRow(content.snapshot, content.offline, content.refreshing, zone, is24Hour)
         Spacer(modifier = GlanceModifier.height(8.dp))
         UsageBlock(
             label = "Session",
@@ -152,7 +149,7 @@ private fun NormalContent(content: WidgetUiState.Content) {
 }
 
 @Composable
-private fun HeaderRow(snapshot: UsageSnapshot, offline: Boolean, zone: ZoneId, is24Hour: Boolean) {
+private fun HeaderRow(snapshot: UsageSnapshot, offline: Boolean, refreshing: Boolean, zone: ZoneId, is24Hour: Boolean) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -178,15 +175,27 @@ private fun HeaderRow(snapshot: UsageSnapshot, offline: Boolean, zone: ZoneId, i
             }
             Text(updatedLabel, style = TextStyle(color = ColorProvider(Palette.MutedText), fontSize = 11.sp))
             Spacer(modifier = GlanceModifier.width(4.dp))
-            Box(
-                modifier = GlanceModifier.size(24.dp).clickable(actionRunCallback<RefreshAction>()),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    provider = ImageProvider(R.drawable.ic_refresh),
-                    contentDescription = "Refresh",
-                    modifier = GlanceModifier.size(20.dp)
-                )
+            if (refreshing) {
+                Box(modifier = GlanceModifier.size(24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = GlanceModifier.size(16.dp),
+                        color = ColorProvider(Palette.MutedText)
+                    )
+                }
+            } else {
+                Box(
+                    modifier = GlanceModifier
+                        .size(24.dp)
+                        .cornerRadius(12.dp)
+                        .clickable(actionRunCallback<RefreshAction>()),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        provider = ImageProvider(R.drawable.ic_refresh),
+                        contentDescription = "Refresh",
+                        modifier = GlanceModifier.size(20.dp)
+                    )
+                }
             }
         }
     }
