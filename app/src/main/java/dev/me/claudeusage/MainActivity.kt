@@ -14,10 +14,12 @@ import android.webkit.CookieManager
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import androidx.core.view.setPadding
 import androidx.glance.appwidget.updateAll
 import androidx.work.ExistingPeriodicWorkPolicy
+import dev.me.claudeusage.data.AccountFetcher
 import dev.me.claudeusage.data.OkHttpFetcher
 import dev.me.claudeusage.data.SecureStore
 import dev.me.claudeusage.data.UsageRepository
@@ -43,15 +45,16 @@ private const val BAR_TRACK = "#3A3935"
 private const val ACCENT = "#D97757"
 private const val WARNING = "#E5A24A"
 private const val CRITICAL = "#D4574E"
+private const val KEY_ACCOUNT_EMAIL = "email"
 
 class MainActivity : Activity() {
 
     private lateinit var secureStore: SecureStore
     private lateinit var repository: UsageRepository
     private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val mediumFont = Typeface.create("sans-serif-medium", Typeface.NORMAL)
 
     private lateinit var accountAction: TextView
+    private lateinit var accountEmail: TextView
     private lateinit var cardBody: LinearLayout
     private lateinit var rawJsonRow: TextView
     private lateinit var intervalRow: LinearLayout
@@ -127,19 +130,33 @@ class MainActivity : Activity() {
         val title = TextView(this).apply {
             text = getString(R.string.app_name)
             textSize = 20f
-            typeface = mediumFont
             setTextColor(PRIMARY_TEXT.toColorInt())
+            bold()
         }
         row.addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
+        val accountColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.END
+        }
         accountAction = TextView(this).apply {
             textSize = 14f
-            typeface = mediumFont
+            gravity = Gravity.END
             setTextColor(ACCENT.toColorInt())
             setOnClickListener { onAccountActionClick() }
-            setPadding(dp(8))
+            setPadding(dp(8), dp(8), dp(8), 0)
+            bold()
         }
-        row.addView(accountAction)
+        accountEmail = TextView(this).apply {
+            textSize = 11f
+            gravity = Gravity.END
+            setTextColor(MUTED_TEXT.toColorInt())
+            setPadding(dp(8), 0, dp(8), dp(4))
+            visibility = View.GONE
+        }
+        accountColumn.addView(accountAction, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        accountColumn.addView(accountEmail, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        row.addView(accountColumn)
         return row
     }
 
@@ -147,9 +164,9 @@ class MainActivity : Activity() {
         return TextView(this).apply {
             text = "${hours}h"
             textSize = 13f
-            typeface = mediumFont
             setPadding(dp(14), dp(8), dp(14), dp(8))
             setOnClickListener { onIntervalSelected(hours) }
+            bold()
         }
     }
 
@@ -159,12 +176,36 @@ class MainActivity : Activity() {
         val signedIn = secureStore.getString(SecureStore.KEY_COOKIE) != null
         accountAction.text = if (signedIn) "Sign out" else "Sign in"
 
+        if (signedIn) {
+            val email = accountPrefs().getString(KEY_ACCOUNT_EMAIL, null)
+            if (email != null) {
+                accountEmail.text = email
+                accountEmail.visibility = View.VISIBLE
+            } else {
+                accountEmail.visibility = View.GONE
+                fetchAccountEmail()
+            }
+        } else {
+            accountEmail.visibility = View.GONE
+        }
+
         val snapshot = repository.lastSnapshot()
         val resultKind = repository.lastResultKind()
         val uiState = computeUiState(signedIn, snapshot, resultKind, refreshing = false, now = Instant.now())
         renderCard(uiState)
         renderIntervalChips()
     }
+
+    private fun fetchAccountEmail() {
+        activityScope.launch {
+            val email = AccountFetcher.fetchEmail(secureStore) ?: return@launch
+            accountPrefs().edit { putString(KEY_ACCOUNT_EMAIL, email) }
+            accountEmail.text = email
+            accountEmail.visibility = View.VISIBLE
+        }
+    }
+
+    private fun accountPrefs() = getSharedPreferences("account_cache", Context.MODE_PRIVATE)
 
     private fun renderCard(uiState: WidgetUiState) {
         cardBody.removeAllViews()
@@ -216,8 +257,8 @@ class MainActivity : Activity() {
         headerRow.addView(TextView(this).apply {
             text = "${pct.toInt()}%"
             textSize = 16f
-            typeface = mediumFont
             setTextColor(textColor.toColorInt())
+            bold()
         })
         column.addView(headerRow)
         column.addView(spacer(6))
@@ -299,6 +340,7 @@ class MainActivity : Activity() {
 
     private fun signOut() {
         secureStore.clear()
+        accountPrefs().edit { clear() }
         CookieManager.getInstance().removeAllCookies(null)
         render()
     }
@@ -316,16 +358,19 @@ class MainActivity : Activity() {
     private fun label(text: String) = TextView(this).apply {
         this.text = text
         textSize = 13f
-        typeface = mediumFont
         setTextColor(MUTED_TEXT.toColorInt())
     }
 
     private fun textButton(text: String, onClick: () -> Unit) = TextView(this).apply {
         this.text = text
         textSize = 14f
-        typeface = mediumFont
         setTextColor(ACCENT.toColorInt())
         setOnClickListener { onClick() }
+        bold()
+    }
+
+    private fun TextView.bold() {
+        setTypeface(typeface, Typeface.BOLD)
     }
 
     private fun spacer(sizeDp: Int, horizontal: Boolean = false): View = View(this).apply {

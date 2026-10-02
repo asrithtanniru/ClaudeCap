@@ -9,45 +9,52 @@ import java.time.Instant
 class UsageParserTest {
 
     @Test
-    fun `fraction values with ISO resets_at`() {
+    fun `real captured shape with offset resets_at and weekly_all kind`() {
         val raw = """
-            {"five_hour":{"utilization":0.37,"resets_at":"2026-10-02T18:00:00Z"},
-             "seven_day":{"utilization":0.52,"resets_at":"2026-10-07T03:30:00Z"}}
+            {"random_decoy_field":null,"another_decoy":null,
+             "limits":[
+               {"kind":"session","group":"session","percent":26,"severity":"normal","resets_at":"2026-10-02T12:09:59.891058+00:00","scope":null,"is_active":true},
+               {"kind":"weekly_all","group":"weekly","percent":12,"severity":"normal","resets_at":"2026-10-02T13:59:59.891083+00:00","scope":null,"is_active":false}
+             ],
+             "spend":{"used":{"amount_minor":0}},
+             "seven_day_breakdown":{"rows":[{"key":"chat","percent":48}]}}
         """.trimIndent()
         val result = UsageParser.parse(raw) as ParseResult.Success
-        assertEquals(37.0, result.snapshot.sessionPct, 0.001)
-        assertEquals(52.0, result.snapshot.weeklyPct!!, 0.001)
-        assertEquals(Instant.parse("2026-10-02T18:00:00Z"), result.snapshot.sessionResetsAt)
-        assertEquals(Instant.parse("2026-10-07T03:30:00Z"), result.snapshot.weeklyResetsAt)
+        assertEquals(26.0, result.snapshot.sessionPct, 0.001)
+        assertEquals(12.0, result.snapshot.weeklyPct!!, 0.001)
+        assertEquals(Instant.parse("2026-10-02T12:09:59.891058Z"), result.snapshot.sessionResetsAt)
+        assertEquals(Instant.parse("2026-10-02T13:59:59.891083Z"), result.snapshot.weeklyResetsAt)
     }
 
     @Test
-    fun `percent values with epoch seconds resets_at`() {
+    fun `fraction percent values are normalized to 0-100`() {
         val raw = """
-            {"five_hour":{"utilization":37,"resets_at":1759424400},
-             "seven_day":{"utilization":52,"resets_at":1759856400}}
+            {"limits":[
+               {"kind":"session","percent":0.37,"resets_at":"2026-10-02T18:00:00Z"},
+               {"kind":"weekly","percent":0.52,"resets_at":"2026-10-07T03:30:00Z"}
+             ]}
         """.trimIndent()
         val result = UsageParser.parse(raw) as ParseResult.Success
         assertEquals(37.0, result.snapshot.sessionPct, 0.001)
         assertEquals(52.0, result.snapshot.weeklyPct!!, 0.001)
+    }
+
+    @Test
+    fun `epoch seconds and epoch millis resets_at`() {
+        val raw = """
+            {"limits":[
+               {"kind":"session","percent":10,"resets_at":1759424400},
+               {"kind":"weekly_all","percent":20,"resets_at":1759424400000}
+             ]}
+        """.trimIndent()
+        val result = UsageParser.parse(raw) as ParseResult.Success
         assertEquals(Instant.ofEpochSecond(1759424400), result.snapshot.sessionResetsAt)
+        assertEquals(Instant.ofEpochMilli(1759424400000), result.snapshot.weeklyResetsAt)
     }
 
     @Test
-    fun `epoch millis resets_at and extra unknown keys are ignored`() {
-        val raw = """
-            {"five_hour":{"utilization":0.1,"resets_at":1759424400000,"model_breakdown":{"opus":0.4}},
-             "seven_day":{"utilization":0.2,"resets_at":1759856400000},
-             "some_future_field":{"nested":true}}
-        """.trimIndent()
-        val result = UsageParser.parse(raw) as ParseResult.Success
-        assertEquals(10.0, result.snapshot.sessionPct, 0.001)
-        assertEquals(Instant.ofEpochMilli(1759424400000), result.snapshot.sessionResetsAt)
-    }
-
-    @Test
-    fun `missing weekly window leaves weekly fields null`() {
-        val raw = """{"five_hour":{"utilization":0.6,"resets_at":"2026-10-02T18:00:00Z"}}"""
+    fun `missing weekly entry leaves weekly fields null`() {
+        val raw = """{"limits":[{"kind":"session","percent":60,"resets_at":"2026-10-02T18:00:00Z"}]}"""
         val result = UsageParser.parse(raw) as ParseResult.Success
         assertEquals(60.0, result.snapshot.sessionPct, 0.001)
         assertNull(result.snapshot.weeklyPct)
@@ -55,8 +62,8 @@ class UsageParserTest {
     }
 
     @Test
-    fun `case and underscore key variants are tolerated`() {
-        val raw = """{"FiveHour":{"Utilization":0.8,"ResetsAt":"2026-10-02T18:00:00Z"}}"""
+    fun `group field matches when kind is absent`() {
+        val raw = """{"limits":[{"group":"session","percent":80,"resets_at":"2026-10-02T18:00:00Z"}]}"""
         val result = UsageParser.parse(raw) as ParseResult.Success
         assertEquals(80.0, result.snapshot.sessionPct, 0.001)
     }
@@ -69,9 +76,14 @@ class UsageParserTest {
     }
 
     @Test
-    fun `missing five_hour window returns failure`() {
-        val raw = """{"seven_day":{"utilization":0.5,"resets_at":"2026-10-07T03:30:00Z"}}"""
-        val result = UsageParser.parse(raw)
-        assertTrue(result is ParseResult.Failure)
+    fun `missing limits array returns failure`() {
+        val raw = """{"spend":{"used":0}}"""
+        assertTrue(UsageParser.parse(raw) is ParseResult.Failure)
+    }
+
+    @Test
+    fun `missing session entry returns failure`() {
+        val raw = """{"limits":[{"kind":"weekly_all","percent":50,"resets_at":"2026-10-02T18:00:00Z"}]}"""
+        assertTrue(UsageParser.parse(raw) is ParseResult.Failure)
     }
 }

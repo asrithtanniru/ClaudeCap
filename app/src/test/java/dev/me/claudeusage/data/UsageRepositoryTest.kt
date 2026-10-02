@@ -22,7 +22,7 @@ private class FakeFetcher(private val results: MutableList<FetchResult>) : Usage
 }
 
 private const val SAMPLE_JSON =
-    """{"five_hour":{"utilization":0.5,"resets_at":"2026-10-02T18:00:00Z"}}"""
+    """{"limits":[{"kind":"session","percent":50,"resets_at":"2026-10-02T18:00:00Z"}]}"""
 
 class UsageRepositoryTest {
 

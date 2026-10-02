@@ -1,30 +1,34 @@
 package dev.me.claudeusage.data
 
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.format.DateTimeParseException
 
-/** Tolerant parser for the unofficial usage endpoint. Key names and shapes aren't verified. */
+/**
+ * Parser for the unofficial usage endpoint. Confirmed shape (captured from a live
+ * response): a top-level "limits" array of {kind, group, percent, resets_at, is_active, ...},
+ * padded with large numbers of unrelated null fields (apparent anti-scraping noise).
+ * Still tolerant about exact key casing/underscores since this is unverified and may change.
+ */
 object UsageParser {
 
     fun parse(raw: String): ParseResult {
         return try {
             val root = JSONObject(raw)
-            val sessionObj = findWindow(root, "five_hour") ?: return ParseResult.Failure(raw)
-            val weeklyObj = findWindow(root, "seven_day")
+            val limits = root.optJSONArray("limits") ?: return ParseResult.Failure(raw)
 
-            val sessionUtil = findUtilization(sessionObj) ?: return ParseResult.Failure(raw)
-            val weeklyUtil = weeklyObj?.let { findUtilization(it) }
-
-            val isFraction = listOfNotNull(sessionUtil, weeklyUtil).all { it <= 1.0 }
-            fun normalize(value: Double) = if (isFraction) value * 100.0 else value
+            val sessionLimit = findLimit(limits) { it == "session" } ?: return ParseResult.Failure(raw)
+            val weeklyLimit = findLimit(limits) { it.contains("weekly") }
 
             ParseResult.Success(
                 UsageSnapshot(
-                    sessionPct = normalize(sessionUtil),
-                    sessionResetsAt = findResetsAt(sessionObj),
-                    weeklyPct = weeklyUtil?.let { normalize(it) },
-                    weeklyResetsAt = weeklyObj?.let { findResetsAt(it) },
+                    sessionPct = percentOf(sessionLimit),
+                    sessionResetsAt = parseInstant(sessionLimit.opt("resets_at")),
+                    weeklyPct = weeklyLimit?.let { percentOf(it) },
+                    weeklyResetsAt = weeklyLimit?.let { parseInstant(it.opt("resets_at")) },
                     fetchedAt = Instant.now()
                 )
             )
@@ -33,56 +37,37 @@ object UsageParser {
         }
     }
 
-    private fun JSONObject.keyList(): List<String> {
-        val result = mutableListOf<String>()
-        val it = keys()
-        while (it.hasNext()) result.add(it.next())
-        return result
-    }
-
-    private fun normalizeKey(key: String) = key.lowercase().replace("_", "").replace("-", "")
-
-    private fun findWindow(root: JSONObject, canonical: String): JSONObject? {
-        val target = normalizeKey(canonical)
-        return root.keyList()
-            .firstOrNull { normalizeKey(it) == target }
-            ?.let { root.opt(it) as? JSONObject }
-    }
-
-    private fun findUtilization(obj: JSONObject): Double? {
-        for (key in obj.keyList()) {
-            if (normalizeKey(key).contains("utilization")) {
-                val value = obj.opt(key)
-                when (value) {
-                    is Number -> return value.toDouble()
-                    is String -> value.toDoubleOrNull()?.let { return it }
-                }
-            }
+    private fun findLimit(limits: JSONArray, matches: (String) -> Boolean): JSONObject? {
+        for (i in 0 until limits.length()) {
+            val obj = limits.optJSONObject(i) ?: continue
+            val kind = obj.optString("kind", "").lowercase()
+            val group = obj.optString("group", "").lowercase()
+            if (matches(kind) || matches(group)) return obj
         }
         return null
     }
 
-    private fun findResetsAt(obj: JSONObject): Instant? {
-        for (key in obj.keyList()) {
-            val normalized = normalizeKey(key)
-            if (normalized.contains("resetsat") || normalized.contains("resetat")) {
-                return parseInstant(obj.opt(key))
-            }
-        }
-        return null
+    private fun percentOf(limit: JSONObject): Double {
+        val value = limit.optDouble("percent", 0.0)
+        return if (value <= 1.0) value * 100.0 else value
     }
 
     private fun parseInstant(value: Any?): Instant? = when (value) {
-        is String -> try {
-            Instant.parse(value)
-        } catch (e: Exception) {
-            null
+        is String -> {
+            try {
+                Instant.parse(value)
+            } catch (e: DateTimeParseException) {
+                try {
+                    OffsetDateTime.parse(value).toInstant()
+                } catch (e2: DateTimeParseException) {
+                    null
+                }
+            }
         }
         is Number -> {
             val epoch = value.toLong()
             if (epoch > 10_000_000_000L) Instant.ofEpochMilli(epoch) else Instant.ofEpochSecond(epoch)
         }
-        null -> null
         else -> null
     }
 }

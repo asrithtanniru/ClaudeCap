@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 object RefreshScheduler {
     const val WORK_NAME = "usage_refresh_periodic"
     const val DEFAULT_INTERVAL_HOURS = 12L
-    val ALLOWED_INTERVAL_HOURS = listOf(6L, 12L, 24L)
+    val ALLOWED_INTERVAL_HOURS = listOf(3L, 6L, 12L, 24L)
 
     private const val PREFS_NAME = "app_settings"
     private const val KEY_INTERVAL_HOURS = "refresh_interval_hours"
