@@ -3,7 +3,6 @@ package dev.me.claudeusage
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.webkit.CookieManager
@@ -17,6 +16,7 @@ import dev.me.claudeusage.data.SecureStore
 import dev.me.claudeusage.data.UsageRepository
 import dev.me.claudeusage.data.WebViewFetcher
 import dev.me.claudeusage.widget.UsageWidget
+import androidx.core.graphics.toColorInt
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +38,7 @@ class MainActivity : Activity() {
 
         statusText = TextView(this).apply {
             textSize = 16f
-            setTextColor(Color.parseColor("#FAF9F5"))
+            setTextColor("#FAF9F5".toColorInt())
             gravity = Gravity.CENTER
         }
 
@@ -61,13 +61,13 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#1F1E1D"))
+            setBackgroundColor("#1F1E1D".toColorInt())
             setPadding(48, 96, 48, 48)
             gravity = Gravity.CENTER_HORIZONTAL
             addView(TextView(this@MainActivity).apply {
                 text = "Claude Usage"
                 textSize = 22f
-                setTextColor(Color.parseColor("#FAF9F5"))
+                setTextColor("#FAF9F5".toColorInt())
                 gravity = Gravity.CENTER
             })
             addView(statusText)
@@ -118,7 +118,7 @@ class MainActivity : Activity() {
         val text = TextView(this).apply {
             text = raw
             setPadding(32, 32, 32, 32)
-            setTextColor(Color.parseColor("#FAF9F5"))
+            setTextColor("#FAF9F5".toColorInt())
         }
         AlertDialog.Builder(this)
             .setTitle("Raw response")

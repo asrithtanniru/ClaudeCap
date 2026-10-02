@@ -1,6 +1,7 @@
 package dev.me.claudeusage.data
 
 import android.content.Context
+import androidx.core.content.edit
 import org.json.JSONObject
 import java.time.Instant
 
@@ -13,7 +14,7 @@ class SharedPrefsStore(context: Context) : KeyValueStore {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     override fun getString(key: String): String? = prefs.getString(key, null)
     override fun putString(key: String, value: String) {
-        prefs.edit().putString(key, value).apply()
+        prefs.edit { putString(key, value) }
     }
 
     companion object {

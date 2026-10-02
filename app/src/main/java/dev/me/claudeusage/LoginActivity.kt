@@ -1,5 +1,6 @@
 package dev.me.claudeusage
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
@@ -17,6 +18,7 @@ class LoginActivity : Activity() {
     private lateinit var secureStore: SecureStore
     private lateinit var webView: WebView
 
+    @SuppressLint("SetJavaScriptEnabled") // required: claude.ai's login and the usage page are JS apps
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         secureStore = SecureStore(this)

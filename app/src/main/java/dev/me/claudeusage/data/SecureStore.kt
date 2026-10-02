@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -25,7 +26,7 @@ class SecureStore(context: Context) {
                 System.arraycopy(ciphertext, 0, out, 1 + cipher.iv.size, ciphertext.size)
             }
         }
-        prefs.edit().putString(key, Base64.encodeToString(payload, Base64.NO_WRAP)).apply()
+        prefs.edit { putString(key, Base64.encodeToString(payload, Base64.NO_WRAP)) }
     }
 
     fun getString(key: String): String? {
@@ -40,7 +41,7 @@ class SecureStore(context: Context) {
     }
 
     fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
 
     private fun secretKey(): SecretKey {

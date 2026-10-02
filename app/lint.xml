@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Personal, English-only app (localeFilters = ["en"]); nothing here is ever translated. -->
+    <issue id="SetTextI18n" severity="ignore" />
+
+    <!-- compileSdk is pinned to 36: platform 37 isn't available in this environment's SDK yet. -->
+    <issue id="OldTargetApi" severity="ignore" />
+    <issue id="GradleDependency" severity="ignore" />
+
+    <!-- okhttp 5.5.0's AAR metadata requires compileSdk 37; staying on 5.4.0 until that's available. -->
+    <issue id="NewerVersionAvailable" severity="ignore" />
+</lint>
