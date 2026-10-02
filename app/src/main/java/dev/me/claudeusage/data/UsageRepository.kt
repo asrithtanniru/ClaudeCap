@@ -42,6 +42,8 @@ class UsageRepository(
 
     fun lastRawJson(): String? = store.getString(KEY_RAW_JSON)
 
+    fun lastResultKind(): String? = store.getString(KEY_LAST_RESULT)
+
     fun lastSnapshot(): UsageSnapshot? {
         val json = store.getString(KEY_SNAPSHOT) ?: return null
         return try {
@@ -74,15 +76,31 @@ class UsageRepository(
             when (val parsed = UsageParser.parse(fetchResult.rawJson)) {
                 is ParseResult.Success -> {
                     persistSnapshot(parsed.snapshot)
+                    store.putString(KEY_LAST_RESULT, RESULT_SUCCESS)
                     RefreshResult.Success(parsed.snapshot)
                 }
-                is ParseResult.Failure -> RefreshResult.ParseFailed(fetchResult.rawJson)
+                is ParseResult.Failure -> {
+                    store.putString(KEY_LAST_RESULT, RESULT_PARSE_FAILED)
+                    RefreshResult.ParseFailed(fetchResult.rawJson)
+                }
             }
         }
-        is FetchResult.NotSignedIn -> RefreshResult.NotSignedIn
-        is FetchResult.Blocked -> RefreshResult.Blocked
-        is FetchResult.NetworkError -> RefreshResult.NetworkError(fetchResult.message)
-        is FetchResult.Http -> RefreshResult.HttpError(fetchResult.code)
+        is FetchResult.NotSignedIn -> {
+            store.putString(KEY_LAST_RESULT, RESULT_NOT_SIGNED_IN)
+            RefreshResult.NotSignedIn
+        }
+        is FetchResult.Blocked -> {
+            store.putString(KEY_LAST_RESULT, RESULT_BLOCKED)
+            RefreshResult.Blocked
+        }
+        is FetchResult.NetworkError -> {
+            store.putString(KEY_LAST_RESULT, RESULT_NETWORK_ERROR)
+            RefreshResult.NetworkError(fetchResult.message)
+        }
+        is FetchResult.Http -> {
+            store.putString(KEY_LAST_RESULT, RESULT_HTTP_ERROR)
+            RefreshResult.HttpError(fetchResult.code)
+        }
     }
 
     private fun persistSnapshot(snapshot: UsageSnapshot) {
@@ -99,7 +117,15 @@ class UsageRepository(
         private const val KEY_RAW_JSON = "raw_json"
         private const val KEY_SNAPSHOT = "snapshot"
         private const val KEY_PREFERRED_FETCHER = "preferred_fetcher"
+        private const val KEY_LAST_RESULT = "last_result"
         private const val PRIMARY_NAME = "okhttp"
         private const val FALLBACK_NAME = "webview"
+
+        const val RESULT_SUCCESS = "success"
+        const val RESULT_NOT_SIGNED_IN = "not_signed_in"
+        const val RESULT_BLOCKED = "blocked"
+        const val RESULT_NETWORK_ERROR = "network_error"
+        const val RESULT_HTTP_ERROR = "http_error"
+        const val RESULT_PARSE_FAILED = "parse_failed"
     }
 }
