@@ -11,6 +11,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import dev.asrithtanniru.claudecap.data.SecureStore
 
 /** WebView login at claude.ai. Long-press the page to paste a cookie header instead. */
@@ -44,10 +46,27 @@ class LoginActivity : Activity() {
             setOnLongClickListener { showPasteCookieDialog(); true }
             loadUrl(LOGIN_URL)
         }
-        setContentView(webView, ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-        ))
+
+        val hint = TextView(this).apply {
+            text = "Use \"Continue with email\" below, then enter the verification code sent to " +
+                "your email. Google sign-in doesn't work inside this app."
+            setBackgroundColor("#262624".toColorInt())
+            setTextColor("#9C9A92".toColorInt())
+            textSize = 13f
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(hint)
+            addView(webView, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            ))
+        }
+        setContentView(root)
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun tryCaptureSession() {
         val cookie = CookieManager.getInstance().getCookie(COOKIE_DOMAIN) ?: return
