@@ -1,6 +1,7 @@
 package dev.me.claudeusage
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -8,17 +9,29 @@ import android.view.Gravity
 import android.webkit.CookieManager
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import dev.me.claudeusage.data.OkHttpFetcher
+import dev.me.claudeusage.data.RefreshResult
 import dev.me.claudeusage.data.SecureStore
+import dev.me.claudeusage.data.UsageRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class MainActivity : Activity() {
 
     private lateinit var secureStore: SecureStore
+    private lateinit var repository: UsageRepository
     private lateinit var statusText: TextView
+    private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         secureStore = SecureStore(this)
+        repository = UsageRepository(this, OkHttpFetcher(secureStore))
 
         statusText = TextView(this).apply {
             textSize = 16f
@@ -32,11 +45,11 @@ class MainActivity : Activity() {
         }
         val refreshButton = Button(this).apply {
             text = "Refresh now"
-            setOnClickListener { /* wired up in Phase 3 */ }
+            setOnClickListener { refreshNow() }
         }
         val showJsonButton = Button(this).apply {
             text = "Show raw JSON"
-            setOnClickListener { /* wired up in Phase 3 */ }
+            setOnClickListener { showRawJson() }
         }
         val signOutButton = Button(this).apply {
             text = "Sign out"
@@ -68,9 +81,45 @@ class MainActivity : Activity() {
         updateStatus()
     }
 
-    private fun updateStatus() {
+    override fun onDestroy() {
+        super.onDestroy()
+        activityScope.cancel()
+    }
+
+    private fun updateStatus(extra: String? = null) {
         val signedIn = secureStore.getString(SecureStore.KEY_COOKIE) != null
-        statusText.text = if (signedIn) "Signed in" else "Signed out"
+        val base = if (signedIn) "Signed in" else "Signed out"
+        statusText.text = if (extra != null) "$base · $extra" else base
+    }
+
+    private fun refreshNow() {
+        updateStatus("Refreshing…")
+        activityScope.launch {
+            val result = repository.refresh()
+            val extra = when (result) {
+                is RefreshResult.Success -> "Updated"
+                RefreshResult.NotSignedIn -> "Not signed in"
+                RefreshResult.Blocked -> "Blocked"
+                is RefreshResult.NetworkError -> "Network error"
+                is RefreshResult.HttpError -> "HTTP ${result.code}"
+                is RefreshResult.ParseFailed -> "Couldn't read usage"
+            }
+            updateStatus(extra)
+        }
+    }
+
+    private fun showRawJson() {
+        val raw = repository.lastRawJson() ?: "No data yet"
+        val text = TextView(this).apply {
+            text = raw
+            setPadding(32, 32, 32, 32)
+            setTextColor(Color.parseColor("#FAF9F5"))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Raw response")
+            .setView(ScrollView(this).apply { addView(text) })
+            .setPositiveButton("Close", null)
+            .show()
     }
 
     private fun signOut() {

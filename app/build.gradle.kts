@@ -57,4 +57,7 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit)
+    // Android's org.json classes are unmocked stubs in plain unit tests; this is the
+    // real JSON-java implementation under the same package, test-only.
+    testImplementation(libs.org.json)
 }
