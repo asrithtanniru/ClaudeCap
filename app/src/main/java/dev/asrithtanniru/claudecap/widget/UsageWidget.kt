@@ -76,15 +76,23 @@ class UsageWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(setOf(SIZE_COMPACT, SIZE_REGULAR))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val signedIn = SecureStore(context).getString(SecureStore.KEY_COOKIE) != null
+        val secureStore = SecureStore(context)
         val repository = buildRepository(context)
-        val snapshot = repository.lastSnapshot()
-        val resultKind = repository.lastResultKind()
 
+        // Glance keeps this session alive across update() calls and only recomposes the
+        // lambda below -- provideGlance itself doesn't re-run. Anything read out here is
+        // captured once, so persisted data must be read inside the composition.
         provideContent {
             val prefs = currentState<Preferences>()
             val refreshing = prefs[REFRESHING_KEY] ?: false
-            val uiState = computeUiState(signedIn, snapshot, resultKind, refreshing, Instant.now())
+            val signedIn = secureStore.getString(SecureStore.KEY_COOKIE) != null
+            val uiState = computeUiState(
+                signedIn,
+                repository.lastSnapshot(),
+                repository.lastResultKind(),
+                refreshing,
+                Instant.now()
+            )
             WidgetContent(uiState)
         }
     }
