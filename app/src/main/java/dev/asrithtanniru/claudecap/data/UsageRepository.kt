@@ -2,6 +2,8 @@ package dev.asrithtanniru.claudecap.data
 
 import android.content.Context
 import androidx.core.content.edit
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.time.Instant
 
@@ -30,7 +32,13 @@ class UsageRepository(
     constructor(context: Context, primaryFetcher: UsageFetcher, fallbackFetcher: UsageFetcher) :
         this(SharedPrefsStore(context), primaryFetcher, fallbackFetcher)
 
-    suspend fun refresh(): RefreshResult {
+    // Widget taps, the periodic worker, and app-open refreshes can all fire close together.
+    // Without serializing them, two overlapping refreshes can finish out of order -- the one
+    // that happens to apply its widget render last "wins" the screen even if its own fetch
+    // started earlier and is now stale. Mutex is on the companion object (shared across every
+    // UsageRepository instance, since a fresh one is constructed per call site) so this holds
+    // process-wide, not just per-instance.
+    suspend fun refresh(): RefreshResult = refreshMutex.withLock {
         var lastResult: FetchResult = FetchResult.Blocked
         for ((name, fetcher) in fetcherOrder()) {
             lastResult = fetcher.fetch()
@@ -38,9 +46,9 @@ class UsageRepository(
             // which surfaces as a plain IOException -- try the other fetcher for that too.
             if (lastResult is FetchResult.Blocked || lastResult is FetchResult.NetworkError) continue
             store.putString(KEY_PREFERRED_FETCHER, name)
-            return handle(lastResult)
+            return@withLock handle(lastResult)
         }
-        return handle(lastResult)
+        handle(lastResult)
     }
 
     fun lastRawJson(): String? = store.getString(KEY_RAW_JSON)
@@ -117,6 +125,8 @@ class UsageRepository(
     }
 
     companion object {
+        private val refreshMutex = Mutex()
+
         private const val KEY_RAW_JSON = "raw_json"
         private const val KEY_SNAPSHOT = "snapshot"
         private const val KEY_PREFERRED_FETCHER = "preferred_fetcher"
