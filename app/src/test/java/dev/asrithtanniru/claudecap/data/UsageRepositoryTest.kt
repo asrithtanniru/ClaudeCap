@@ -59,6 +59,19 @@ class UsageRepositoryTest {
     }
 
     @Test
+    fun `primary network error falls back to webview too`() = runBlocking {
+        val primary = FakeFetcher(mutableListOf(FetchResult.NetworkError("connection reset")))
+        val fallback = FakeFetcher(mutableListOf(FetchResult.Success(SAMPLE_JSON)))
+        val repo = UsageRepository(InMemoryStore(), primary, fallback)
+
+        val result = repo.refresh()
+
+        assertTrue(result is RefreshResult.Success)
+        assertEquals(1, primary.callCount)
+        assertEquals(1, fallback.callCount)
+    }
+
+    @Test
     fun `both blocked returns Blocked`() = runBlocking {
         val primary = FakeFetcher(mutableListOf(FetchResult.Blocked))
         val fallback = FakeFetcher(mutableListOf(FetchResult.Blocked))

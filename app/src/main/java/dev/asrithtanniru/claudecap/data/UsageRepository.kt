@@ -34,7 +34,9 @@ class UsageRepository(
         var lastResult: FetchResult = FetchResult.Blocked
         for ((name, fetcher) in fetcherOrder()) {
             lastResult = fetcher.fetch()
-            if (lastResult is FetchResult.Blocked) continue
+            // Cloudflare sometimes resets the connection instead of a clean HTTP block,
+            // which surfaces as a plain IOException -- try the other fetcher for that too.
+            if (lastResult is FetchResult.Blocked || lastResult is FetchResult.NetworkError) continue
             store.putString(KEY_PREFERRED_FETCHER, name)
             return handle(lastResult)
         }

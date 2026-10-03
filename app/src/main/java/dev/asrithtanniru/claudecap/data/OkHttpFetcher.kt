@@ -1,11 +1,14 @@
 package dev.asrithtanniru.claudecap.data
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+
+private const val TAG = "OkHttpFetcher"
 
 class OkHttpFetcher(
     private val secureStore: SecureStore,
@@ -43,6 +46,7 @@ class OkHttpFetcher(
                     }
                 }
             } catch (e: IOException) {
+                Log.w(TAG, "fetch failed: ${e.javaClass.simpleName}: ${e.message}")
                 FetchResult.NetworkError(e.message ?: "network error")
             }
         }

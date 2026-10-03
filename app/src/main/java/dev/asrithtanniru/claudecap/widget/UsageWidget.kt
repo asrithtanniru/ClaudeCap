@@ -92,13 +92,11 @@ class UsageWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(uiState: WidgetUiState) {
-    val context = LocalContext.current
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(Palette.CardBackground)
             .cornerRadius(android.R.dimen.system_app_widget_background_radius)
-            .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
             .padding(16.dp)
     ) {
         when (uiState) {
@@ -112,7 +110,13 @@ private fun WidgetContent(uiState: WidgetUiState) {
 
 @Composable
 private fun TapMessage(message: String) {
-    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    val context = LocalContext.current
+    Box(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .clickable(actionStartActivity(Intent(context, MainActivity::class.java))),
+        contentAlignment = Alignment.Center
+    ) {
         Text(message, style = TextStyle(color = ColorProvider(Palette.PrimaryText), fontSize = 16.sp))
     }
 }

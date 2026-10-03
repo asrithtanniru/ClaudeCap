@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -11,6 +12,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+
+private const val TAG = "WebViewFetcher"
 
 /** Runs the usage fetch as same-origin JS inside a hidden WebView, for when Cloudflare blocks OkHttp. */
 class WebViewFetcher(
@@ -42,6 +45,7 @@ class WebViewFetcher(
         }
 
         val result = withTimeoutOrNull(TIMEOUT_MS) { deferred.await() } ?: FetchResult.NetworkError("WebView timeout")
+        if (result is FetchResult.NetworkError) Log.w(TAG, "fetch failed: ${result.message}")
 
         Handler(Looper.getMainLooper()).post { webView?.destroy() }
         return result
