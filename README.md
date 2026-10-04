@@ -1,90 +1,128 @@
-# ClaudeCap
+<p align="center">
+  <img src="art/banner.png" alt="ClaudeCap widget on an Android home screen" width="100%">
+</p>
 
-A personal Android home-screen widget showing Claude Pro usage: the 5-hour
-session bar, the weekly bar, and when each resets. Sideloaded, personal use
-only — see [Security and hygiene](#security-and-hygiene).
+<h1 align="center">ClaudeCap</h1>
 
-This relies on an **undocumented** claude.ai endpoint (there is no public API
-for Pro usage), so it may break without warning whenever Anthropic changes
-that page.
+<p align="center">
+  An Android home-screen widget that shows your Claude usage at a glance:<br>
+  the 5-hour session limit, the weekly limit, and when each one resets.
+</p>
 
-## Building
+---
 
-Requires JDK 17 and the Android SDK (platform 36, build-tools 36.x).
+## Features
+
+<table>
+  <tr>
+    <td width="33%"><img src="art/card-session.png" alt="Know your 5-hour window"></td>
+    <td width="33%"><img src="art/card-refresh.png" alt="One tap to refresh"></td>
+    <td width="33%"><img src="art/card-local.png" alt="Stays on your phone"></td>
+  </tr>
+</table>
+
+- **Session and weekly bars** with live reset countdowns. Bars turn amber at 70% and red at 90%.
+- **One tap to refresh.** Tap the reload icon on the widget; a spinner shows while it fetches.
+- **Auto-refresh in the background** every 3, 6, 12 or 24 hours (default 12, set in the app). It runs through WorkManager, so the app doesn't need to be open.
+- **Stays on your phone.** Your login is stored encrypted with the Android Keystore and is only ever sent to claude.ai.
+- **Tiny.** The release APK is about 1.9 MB.
+
+## Requirements
+
+- Android 12 or newer (API 31+)
+- A Claude account with usage limits (Pro, Max)
+
+## Install
+
+1. Get the APK and install it. You may need to allow installs from your browser or file manager.
+2. Open **ClaudeCap** and tap **Sign in**.
+3. Use **Continue with email**, then enter the verification code sent to your inbox.
+   - Google sign-in does **not** work inside the app (Google blocks sign-in from embedded browsers).
+   - If a cookie banner appears, accept it. Sign-in needs cookies.
+4. Long-press your home screen → **Widgets** → **ClaudeCap**, and place it.
+
+The app screen shows the same usage card, your signed-in email, and the auto-refresh interval picker.
+
+### When your session expires
+
+The claude.ai login lasts weeks but eventually expires. The widget will then show **Tap to sign in**. Open the app and sign in again; you don't need to re-add the widget.
+
+## How it works
+
+Anthropic doesn't offer a public API for plan usage. ClaudeCap calls the same endpoint the claude.ai **Settings → Usage** page uses:
 
 ```
-./gradlew assembleDebug      # debug build
-./gradlew testDebugUnitTest  # unit tests
-./gradlew lintDebug          # lint
-./gradlew assembleRelease    # release build (R8 + resource shrinking)
+GET https://claude.ai/api/organizations/{org_id}/usage
 ```
 
-## Signing for personal use
+with your claude.ai session cookie. It reads the `limits` array (`session` and `weekly_all` entries) for the percentage and reset time of each window.
 
-The release build is unsigned by default. Two options:
+If Cloudflare blocks the direct request, it falls back to running the same fetch inside a hidden WebView on the claude.ai origin. A refresh can take 15–20 seconds when that happens.
 
-**Debug key (simplest, fine for personal sideloading):** install the debug
-APK instead of the release one:
+> [!WARNING]
+> This is an **unofficial, undocumented endpoint**. Anthropic can change or block it at any time, and the widget will stop working until it's updated. This project isn't affiliated with or endorsed by Anthropic.
 
-```
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
+## Privacy
 
-**Local release keystore:** generate one and keep it out of git (it's already
-covered by `.gitignore` — `*.jks`, `*.keystore`):
+- Your session cookie is encrypted with an Android Keystore AES-256-GCM key and stored only on the device.
+- It's sent only to `claude.ai`, never anywhere else. Nothing is logged.
+- App backups are disabled, and all traffic is HTTPS.
+- Each person signs in with their own account. Don't share your session cookie.
 
-```
-keytool -genkey -v -keystore ~/claude-usage-release.jks \
-    -keyalg RSA -keysize 2048 -validity 10000 -alias claude-usage
-```
+## Build from source
 
-Then add a signing config to `app/build.gradle.kts` pointing at that keystore
-(e.g. read the path/passwords from environment variables or a local,
-git-ignored `keystore.properties` file — never commit credentials), and sign:
+Requires JDK 17 and the Android SDK (platform 36).
 
-```
-./gradlew assembleRelease
-jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-    -keystore ~/claude-usage-release.jks \
-    app/build/outputs/apk/release/app-release-unsigned.apk claude-usage
+```sh
+./gradlew assembleDebug        # debug APK
+./gradlew testDebugUnitTest    # unit tests
+./gradlew lintDebug            # lint
+./gradlew assembleRelease      # release APK (R8 + resource shrinking)
 ```
 
-## Installing
+Outputs:
+
+| Build   | Path                                                      | Size    |
+| ------- | --------------------------------------------------------- | ------- |
+| Debug   | `app/build/outputs/apk/debug/app-debug.apk`               | ~16 MB  |
+| Release | `app/build/outputs/apk/release/app-release-unsigned.apk`  | ~1.9 MB |
+
+The debug APK is signed with the debug key and installs as-is. The release APK is **unsigned**, and Android won't install it until you sign it:
+
+```sh
+keytool -genkey -v -keystore ~/claudecap-release.jks \
+    -keyalg RSA -keysize 2048 -validity 10000 -alias claudecap
+
+$ANDROID_HOME/build-tools/36.0.0/apksigner sign \
+    --ks ~/claudecap-release.jks \
+    --out app-release.apk \
+    app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+Keep the keystore out of git (`*.jks` and `*.keystore` are already ignored).
+
+Install over USB:
+
+```sh
+adb install -r app-release.apk
+```
+
+## Tech stack
+
+- Kotlin, native Android, single `app` module
+- Jetpack **Glance** for the widget
+- **WorkManager** for background refresh
+- **OkHttp** for networking, `org.json` for parsing
+- Plain Android Views for the app screens (no Material, no AppCompat)
+- AGP 9.4, Gradle 9.8, minSdk 31, targetSdk 36
+
+## Project layout
 
 ```
-adb install -r app/build/outputs/apk/release/app-release.apk
+app/src/main/java/dev/asrithtanniru/claudecap/
+  MainActivity.kt         app screen: usage card, account, refresh interval
+  LoginActivity.kt        claude.ai sign-in in a WebView
+  data/                   secure storage, fetchers, parser, repository
+  widget/                 Glance widget, refresh action, worker, scheduler
+art/                      logo, banner and promo images
 ```
-
-(or the debug APK, per above, if you skipped signing).
-
-## Adding the widget
-
-1. Open the app, tap **Sign in**, and log in to claude.ai in the WebView.
-   - If Google SSO is blocked inside the WebView, long-press the page to
-     paste a cookie header instead: in a desktop browser, open
-     claude.ai → DevTools → Network, reload, click any request to claude.ai,
-     and copy the `Cookie` request header value. Paste that plus the org id
-     (the `lastActiveOrg` cookie's value) into the dialog.
-2. Long-press your home screen → **Widgets** → **ClaudeCap**, and place it.
-3. It auto-refreshes every 12 hours; tap the reload icon on the widget for
-   an immediate refresh.
-
-## Re-logging in when the session expires
-
-The claude.ai session cookie lasts weeks but will eventually expire. When it
-does, the widget and app show "Tap to sign in" / "Not signed in". Open the
-app and repeat the **Sign in** step above — no need to remove and re-add the
-widget.
-
-## Security and hygiene
-
-- Cookies and tokens are stored only in an Android Keystore–encrypted
-  SharedPreferences store (`SecureStore`), never logged, and never sent
-  anywhere except to claude.ai.
-- `allowBackup` is disabled and all traffic is HTTPS-only.
-- This app is for a single claude.ai account. If you share the APK with a
-  friend, they sign in with their own account — don't share your session
-  cookie.
-- Since this depends on an undocumented endpoint, Anthropic can change it at
-  any time and break the parser. If usage numbers look wrong, use
-  **Show raw JSON** in the app to capture the current response shape.
