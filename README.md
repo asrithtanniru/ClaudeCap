@@ -80,7 +80,7 @@ If Cloudflare blocks the direct request, it falls back to running the same fetch
 Requires JDK 17 and the Android SDK (platform 36).
 
 ```sh
-git clone <this-repo-url> ClaudeCap
+git clone https://github.com/asrithtanniru/ClaudeCap.git
 cd ClaudeCap
 ./gradlew assembleDebug        # debug APK
 ./gradlew testDebugUnitTest    # unit tests
