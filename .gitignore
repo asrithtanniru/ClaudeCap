@@ -19,3 +19,6 @@ app/build
 
 # IDE
 .idea/
+
+# Local planning notes
+plan.md
