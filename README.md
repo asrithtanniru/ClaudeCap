@@ -32,9 +32,15 @@
 - Android 12 or newer (API 31+)
 - A Claude account with usage limits (Pro, Max)
 
+## Download
+
+Grab the latest APK from the [**Releases**](../../releases/latest) page.
+
+ClaudeCap isn't on the Play Store, so Android will ask you to allow installs from your browser or file manager the first time.
+
 ## Install
 
-1. Get the APK and install it. You may need to allow installs from your browser or file manager.
+1. Install the APK you downloaded.
 2. Open **ClaudeCap** and tap **Sign in**.
 3. Use **Continue with email**, then enter the verification code sent to your inbox.
    - Google sign-in does **not** work inside the app (Google blocks sign-in from embedded browsers).
@@ -74,6 +80,8 @@ If Cloudflare blocks the direct request, it falls back to running the same fetch
 Requires JDK 17 and the Android SDK (platform 36).
 
 ```sh
+git clone <this-repo-url> ClaudeCap
+cd ClaudeCap
 ./gradlew assembleDebug        # debug APK
 ./gradlew testDebugUnitTest    # unit tests
 ./gradlew lintDebug            # lint
@@ -99,7 +107,7 @@ $ANDROID_HOME/build-tools/36.0.0/apksigner sign \
     app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-Keep the keystore out of git (`*.jks` and `*.keystore` are already ignored).
+Keep the keystore out of git (`*.jks` and `*.keystore` are already ignored), and back it up: Android only installs updates signed with the same key.
 
 Install over USB:
 
