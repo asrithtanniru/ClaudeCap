@@ -2,11 +2,13 @@ package dev.asrithtanniru.claudecap
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.View
@@ -16,6 +18,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import androidx.core.view.setPadding
 import androidx.glance.appwidget.updateAll
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -24,6 +27,7 @@ import dev.asrithtanniru.claudecap.data.OkHttpFetcher
 import dev.asrithtanniru.claudecap.data.SecureStore
 import dev.asrithtanniru.claudecap.data.UsageRepository
 import dev.asrithtanniru.claudecap.data.WebViewFetcher
+import dev.asrithtanniru.claudecap.widget.BackgroundDataHint
 import dev.asrithtanniru.claudecap.widget.RefreshScheduler
 import dev.asrithtanniru.claudecap.widget.TimeFormat
 import dev.asrithtanniru.claudecap.widget.UsageWidget
@@ -55,6 +59,7 @@ class MainActivity : Activity() {
 
     private lateinit var accountAction: TextView
     private lateinit var accountEmail: TextView
+    private lateinit var backgroundDataCard: View
     private lateinit var cardBody: LinearLayout
     private lateinit var rawJsonRow: TextView
     private lateinit var intervalRow: LinearLayout
@@ -92,6 +97,9 @@ class MainActivity : Activity() {
         root.addView(buildTopBar())
         root.addView(spacer(16))
 
+        backgroundDataCard = buildBackgroundDataCard()
+        root.addView(backgroundDataCard)
+
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = roundedDrawable(CARD_BG, 20)
@@ -120,6 +128,36 @@ class MainActivity : Activity() {
         root.addView(intervalRow)
 
         return ScrollView(this).apply { addView(root) }
+    }
+
+    private fun buildBackgroundDataCard(): View {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = roundedDrawable(CARD_BG, 20, strokeColor = ACCENT)
+            setPadding(dp(16))
+        }
+        card.addView(TextView(this).apply {
+            text = "Widget can't refresh on mobile data"
+            textSize = 14f
+            setTextColor(PRIMARY_TEXT.toColorInt())
+            bold()
+        })
+        card.addView(spacer(6))
+        card.addView(TextView(this).apply {
+            text = "Android is blocking ClaudeCap's background data. In the next screen, " +
+                "turn on Background data, and Unrestricted data if it's there."
+            textSize = 13f
+            setTextColor(MUTED_TEXT.toColorInt())
+        })
+        card.addView(spacer(10))
+        card.addView(textButton("Open data settings") { openBackgroundDataSettings() })
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            addView(card)
+            addView(spacer(16))
+        }
     }
 
     private fun buildTopBar(): View {
@@ -175,6 +213,8 @@ class MainActivity : Activity() {
     private fun render() {
         val signedIn = secureStore.getString(SecureStore.KEY_COOKIE) != null
         accountAction.text = if (signedIn) "Sign out" else "Sign in"
+        backgroundDataCard.visibility =
+            if (signedIn && BackgroundDataHint.isShowing(this)) View.VISIBLE else View.GONE
 
         if (signedIn) {
             val email = accountPrefs().getString(KEY_ACCOUNT_EMAIL, null)
@@ -324,6 +364,17 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun openBackgroundDataSettings() {
+        val packageUri = "package:$packageName".toUri()
+        val dataSettings = Intent(Settings.ACTION_IGNORE_BACKGROUND_DATA_RESTRICTIONS_SETTINGS, packageUri)
+        try {
+            startActivity(dataSettings)
+        } catch (e: ActivityNotFoundException) {
+            // Some OEM builds don't expose the per-app data screen; app info is one tap away from it.
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri))
+        }
+    }
+
     private fun showRawJson() {
         val raw = repository.lastRawJson() ?: "No data yet"
         val text = TextView(this).apply {
@@ -341,6 +392,7 @@ class MainActivity : Activity() {
     private fun signOut() {
         secureStore.clear()
         accountPrefs().edit { clear() }
+        BackgroundDataHint.clear(this)
         CookieManager.getInstance().removeAllCookies(null)
         render()
     }

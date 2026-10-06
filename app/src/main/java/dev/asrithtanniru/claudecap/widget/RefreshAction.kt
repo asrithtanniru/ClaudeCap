@@ -14,7 +14,10 @@ private val LAST_REFRESH_AT_KEY = longPreferencesKey("last_refresh_at_millis")
 class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val gateway = GlanceRefreshGateway(context, glanceId)
-        performGuardedRefresh(gateway, buildRepository(context), System.currentTimeMillis())
+        val repository = buildRepository(context)
+        if (performGuardedRefresh(gateway, repository, System.currentTimeMillis())) {
+            BackgroundDataHint.record(context, repository.lastResultKind())
+        }
     }
 }
 

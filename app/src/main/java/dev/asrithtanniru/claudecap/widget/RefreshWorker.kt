@@ -7,7 +7,9 @@ import androidx.work.WorkerParameters
 
 class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        buildRepository(applicationContext).refresh()
+        val repository = buildRepository(applicationContext)
+        repository.refresh()
+        BackgroundDataHint.record(applicationContext, repository.lastResultKind())
         UsageWidget().updateAll(applicationContext)
         return Result.success()
     }

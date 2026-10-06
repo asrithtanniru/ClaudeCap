@@ -53,6 +53,17 @@ The app screen shows the same usage card, your signed-in email, and the auto-ref
 
 The claude.ai login lasts weeks but eventually expires. The widget will then show **Tap to sign in**. Open the app and sign in again; you don't need to re-add the widget.
 
+## Troubleshooting
+
+**Widget says "Offline" on mobile data, but works on Wi-Fi.**
+Android is blocking ClaudeCap's background data on mobile data. Widget refreshes run in the background, so they're blocked, while the app itself still works because it's in the foreground. Go to Settings → Apps → ClaudeCap → **Mobile data & Wi-Fi** and turn on **Background data** (and **Unrestricted data usage** if your phone has it). The app shows a card with a shortcut to this screen when it detects the problem.
+
+**Refresh takes 15–20 seconds.**
+Normal when Cloudflare slows the request down; the spinner stays until it finishes.
+
+**Widget says "Tap to sign in".**
+Your claude.ai login expired. Open the app and sign in again.
+
 ## How it works
 
 Anthropic doesn't offer a public API for plan usage. ClaudeCap calls the same endpoint the claude.ai **Settings → Usage** page uses:
